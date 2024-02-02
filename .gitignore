@@ -1,0 +1,8 @@
+.env
+config.json
+cert.pem
+key.pem
+__pycache__/
+Sailor/
+.vscode/
+venv/

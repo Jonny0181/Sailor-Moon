@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/static/sailor.ico" type="image/x-icon" />
+    <title>Sailor Moon</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--background1);
+        color: #c4c9ce;
+        font-family: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial,
+          sans-serif;
+      }
+
+      :root {
+        --background1: #313338;
+        --background2: #2b2d31;
+        --discord-blue: #7289da;
+        --discord-blue-hover: #4752c4;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+
+      .logo-title {
+        display: flex;
+        align-items: center;
+        color: #fff;
+        font-size: 1rem;
+        font-weight: bold;
+      }
+
+      .logo img {
+        width: 50px;
+        height: 50px;
+        margin-right: 10px;
+        border-radius: 50%;
+      }
+
+      #login-button {
+        padding: 10px 15px !important;
+        font-size: 1rem;
+        text-align: center;
+        text-decoration: none;
+        color: #fff;
+        background-color: var(--discord-blue) !important;
+        border-radius: 5px;
+      }
+
+      #login-button:hover {
+        background-color: var(--discord-blue-hover) !important;
+      }
+
+      #user-avatar {
+        width: 50px;
+        height: 50px;
+        margin-left: 1rem;
+        border-radius: 50%;
+      }
+
+      main {
+        display: flex;
+        flex-direction: column;
+        grid-gap: 1rem;
+      }
+
+      #info,
+      #features,
+      #about {
+        background-color: var(--background2);
+        padding: 1.5rem;
+        border-radius: 5px;
+        text-align: center;
+      }
+
+      h2 {
+        margin-top: 0;
+      }
+
+      header > div {
+        display: flex;
+        align-items: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="logo-title">
+          <a class="logo" href="/"
+            ><img
+              src="{{ url_for('static', filename='logo.png') }}"
+              alt="SailorLogo"
+          /></a>
+          <h1>Sailor Moon</h1>
+        </div>
+        <div>
+          <a
+            id="login-button"
+            href="{% if logged_in %}/dashboard{% else %}/discord-login{% endif %}"
+          >
+            {% if logged_in %} Dashboard {% else %} Login with Discord {% endif
+            %}
+          </a>
+          <img
+            src="{% if logged_in %}{{ discord_avatar_url }}{% else %}{{ url_for('static', filename='default_profile_picture.png') }}{% endif %}"
+            alt="Profile Picture"
+            id="user-avatar"
+          />
+        </div>
+      </header>
+      <main>
+        <div id="info">
+          <h2>Info</h2>
+          <p>This is the information section.</p>
+        </div>
+        <div id="features">
+          <h2>Features</h2>
+          <p>Explore the amazing features of our website in this section.</p>
+        </div>
+        <div id="about">
+          <h2>About</h2>
+          <p>Learn more about Sailor Moon and our website's mission.</p>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

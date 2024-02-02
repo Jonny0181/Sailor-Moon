@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="/static/sailor.ico" type="image/x-icon" />
+  <title>Dashboard</title>
+  <style>
+    :root {
+      --text-normal: #c4c7c0;
+      --text-hover: #f8fcff;
+      --background1: #313338;
+      --background2: #2b2d31;
+      --discord-blue: #7289da;
+      --discord-blue-hover: #4752c4;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      background-color: var(--background1);
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    header .logo-title,
+    header .profile-container {
+      margin: 0 10px;
+    }
+
+    .logo-title {
+      display: flex;
+      align-items: center;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: bold;
+    }
+
+    header .logo img {
+      width: 50px;
+      height: 50px;
+      margin-right: 10px;
+      border-radius: 50%;
+    }
+
+    header .logo-title {
+      display: flex;
+      align-items: center;
+    }
+
+    .logo-title>* {
+      margin: auto 0;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      grid-gap: 1rem;
+    }
+
+    .card {
+      width: 10vw;
+      background-color: var(--background2);
+      padding: 2rem;
+      border-radius: 5px;
+      text-align: center;
+      margin-bottom: 1rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 2vh;
+    }
+
+    .card p {
+      margin-bottom: 0;
+    }
+
+    .spotify-card {
+      width: 61vw;
+      background-color: var(--background2);
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      color: #fff;
+      padding: 1rem;
+      border-radius: 5px;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #overview .tiles {  
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .spotify-card img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin-right: 1rem;
+    }
+
+    .spotify-card .details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .spotify-card .details p {
+      margin-bottom: 0.5rem;
+    }
+
+    .spotify-card .details a {
+      text-decoration: none;
+      color: var(--discord-blue);
+    }
+
+    .spotify-card .actions {
+      display: flex;
+      align-items: center;
+    }
+
+    .spotify-card .actions button {
+      margin-left: 1rem;
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .spotify-card .actions button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .spotify-card .actions .disconnect-spotify {
+      background-color: #e74c3c;
+      color: #fff;
+    }
+
+    .spotify-card .actions .open-spotify {
+      background-color: #7289da;
+    }
+
+    .stats-cards {
+      width: 62.7vw;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+    }
+
+    .logo img {
+      width: 50px;
+      height: 50px;
+      margin-right: 10px;
+      border-radius: 50%;
+    }
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      margin-right: 0;
+      /* Remove margin-right for the user avatar */
+      border-radius: 50%;
+    }
+
+    .profile-container {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 15px;
+    }
+
+    /* Buttons */
+    .disconnect-spotify {
+      background-color: #e74c3c;
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 5px;
+      margin-top: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      border: none;
+    }
+
+    .open-spotify {
+      background-color: #7289da !important;
+      color: #fff;
+      padding: 10px 15px;
+      border-radius: 5px;
+      margin-top: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      border: none;
+    }
+
+    .open-spotify a {
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .logout-button {
+      padding: 7px 15px !important;
+      font-size: 14px;
+      text-align: center;
+      text-decoration: none;
+      color: #fff;
+      background-color: var(--discord-blue) !important;
+      border-radius: 5px;
+    }
+
+    .logout-button:hover {
+      background-color: var(--discord-blue-hover) !important;
+    }
+
+    nav ul {
+      list-style-type: none;
+      padding: 0;
+      display: flex;
+    }
+
+    nav ul li {
+      margin-right: 1rem;
+    }
+
+    nav ul li a {
+      text-decoration: none;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+    }
+
+    nav ul li a.active,
+    nav ul li a:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: inherit;
+    }
+
+    #playlists {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+    }
+
+    #playlists-tab-content .content {
+      display: flex;
+      width: 61vw;
+      margin: auto;
+    }
+
+    .playlist-active {
+      background-color: var(--discord-blue-hover);
+      color: var(--text-hover) !important;
+    }
+
+    .playlists-container,
+    .songs-container {
+      flex: 1;
+    }
+
+    .playlists-container {
+      display: flex;
+      flex-direction: column;
+      max-width: fit-content !important;
+      margin-right: 3vw;
+    }
+
+    .playlists-container ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+      width: 15vw;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .playlists-container li {
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: color 0.2s ease;
+      color: var(--text-normal);
+      margin-left: 40px;
+    }
+
+    .playlists-container li:hover {
+      color: var(--text-hover);
+    }
+
+    .songs-container {
+      display: flex;
+      flex-direction: column;
+      margin-top: 3vh;
+    }
+
+    .songs-container ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .song-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex: 1;
+      padding: 0.5rem 1rem;
+      border-radius: 3px;
+      background-color: var(--background2);
+      transition: background-color 0.2s ease;
+    }
+
+    .song-thumbnail {
+      width: 50px;
+      height: 50px;
+      border-radius: 5px;
+      object-fit: cover;
+    }
+
+    .song-details {
+      flex: 1;
+      margin-left: 1rem;
+    }
+
+    .song-name {
+      margin: 0;
+      margin-bottom: 0.2rem;
+    }
+
+    .song-artist {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .song-duration {
+      margin: 0;
+      font-size: 0.8rem;
+      color: #888;
+    }
+
+    .delete-song-button {
+      border: none;
+      background-color: #e74c3c;
+      color: var(--text-hover);
+      padding: 6px 9px;
+      border-radius: 6px;
+      margin-left: 10px;
+      margin-bottom: 1px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .delete-song-button:hover {
+      transform: scale(1.1);
+    }
+
+    .no-playlists {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      margin: 2rem auto;
+      /* Adjust the margin as needed */
+    }
+
+    .no-playlists .description {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .no-playlists .description p {
+      margin: 0;
+    }
+
+    .no-playlists .title {
+      margin-bottom: 2rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <div class="logo-title">
+        <a class="logo" href="/"><img src="{{ url_for('static', filename='logo.png') }}" alt="SailorLogo" /></a>
+        <h1>Dashboard</h1>
+      </div>
+      <nav>
+        <ul>
+          <li><a href="#overview" class="active">Overview</a></li>
+          <li><a href="#playlists">Playlists</a></li>
+        </ul>
+      </nav>
+      <div class="profile-container">
+        <a class="logout-button" href="/discord-logout">Logout</a>
+        <img
+          src="{% if logged_in %}{{ discord_avatar_url }}{% else %}{{ url_for('static', filename='default_profile_picture.png') }}{% endif %}"
+          alt="Profile Picture" class="user-avatar" />
+      </div>
+    </header>
+
+    <div id="overview" class="tab-content active">
+      <div class="tiles">
+        <div class="spotify-card">
+          {% if spotify_linked %}
+          <div>
+            <img src="{{ user_profile_pic }}" alt="Profile Picture" />
+            <div class="details">
+              <p>Connected as {{user_username}}</p>
+              <a href="{{ profile_link }}" target="_blank">Open Spotify</a>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="disconnect-spotify" onclick="disconnectSpotify()">
+              Disconnect Spotify
+            </button>
+          </div>
+          {% else %}
+          <div>
+            <img src="{{ url_for('static', filename='spotify_logo.png') }}" alt="Spotify Logo" />
+            <div class="details">
+              <p>Looks like you don't have a Spotify account linked!</p>
+              <a href="/spotify-login" id="connect-button">Connect Spotify</a>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        <div class="stats-cards">
+          <div class="card">
+            <h2>Songs Played</h2>
+            <p>{{song_stats}}</p>
+          </div>
+          <div class="card">
+            <h2>Duration Listened</h2>
+            <p>{{listen_stats}}</p>
+          </div>
+          <div class="card">
+            <h2>Liked Songs</h2>
+            <p>{{liked_songs}}</p>
+          </div>
+          <div class="card">
+            <h2>Playlists Created</h2>
+            <p>{{playlists_created}}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="playlists-tab-content" class="tab-content">
+    {% if user_playlists_data_bool %}
+    <div class="content">
+      <div class="playlist-containers">
+        
+        {% if user_playlists_data %}
+          <div class="playlists-container">
+            <h2>🎧 Your Playlists</h2>
+            <ul>
+              {% for playlist in user_playlists_data['playlists'] %}
+              <li data-playlist-id="{{ playlist['name'] }}"
+                class="playlist-item {% if loop.index == 1 %}playlist-active{% endif %}">
+                {{ playlist['name'] }}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+        
+        {% if collab_playlists %}
+        <div class="playlists-container">
+          <h2>🤝 Collaborative Playlists</h2>
+          <ul>
+            {% for collab_playlist in collab_data %}
+            {% if logged_in in collab_playlist['allowed_users'] %}
+            <li data-playlist-id="{{ collab_playlist['name'] }}" class="playlist-item collaborative">
+              {{ collab_playlist['name'] }}
+            </li>
+            {% endif %}
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+      </div>
+      <div id="playlist-songs" class="songs-container">
+        <ul id="songs-list"></ul>
+      </div>
+      {% else %}
+      <div class="no-playlists">
+        <div class="title">
+          <h1>No Playlists Found</h1>
+        </div>
+        <div class="description">
+          <p>Looks like you don't have any playlists!</p>
+          <p>Maybe try playing some music on Sailor and creating some awesome playlist!</p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <script>
+      const tabs = document.querySelectorAll("nav ul li a");
+      const tabContents = document.querySelectorAll(".tab-content");
+
+      tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => {
+          // Remove active class from all tabs and tab contents
+          tabs.forEach((tab) => tab.classList.remove("active"));
+          tabContents.forEach((content) => content.classList.remove("active"));
+
+          // Add active class to the clicked tab and corresponding tab content
+          tab.classList.add("active");
+          tabContents[index].classList.add("active");
+        });
+      });
+
+      document.addEventListener("DOMContentLoaded", function () {
+        // Select the first playlist item
+        const firstPlaylistItem = document.querySelector(".playlists-container li");
+
+        // Trigger a click event on the first playlist item
+        if (firstPlaylistItem) {
+          firstPlaylistItem.click();
+        }
+      });
+
+      // Function to fetch Spotify track information
+      async function fetchSpotifyTrackInfo(trackUrl) {
+        const trackId = trackUrl.split('/').pop();
+
+        const response = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+          headers: {
+            'Authorization': `Bearer {{spotify_access_token}}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch track info: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+      }
+
+      // Function to dynamically add songs to the playlist
+      function populateSongs(playlistName, isCollaborative) {
+        const songsContainer = document.getElementById("songs-list");
+        const user_playlists = {{ user_playlists_data | tojson | safe
+      }};
+      const collab_data = {{ collab_data | tojson | safe }}
+      console.log(user_playlists);
+
+      // Find the playlist by name
+      let playlist;
+      if (isCollaborative) {
+        playlist = collab_data.find(
+          (collabPlaylist) => collabPlaylist.name === playlistName
+        );
+      } else {
+        playlist = user_playlists.playlists.find(
+          (userPlaylist) => userPlaylist.name === playlistName
+        );
+      }
+      console.log(playlist);
+
+      // Clear existing songs
+      songsContainer.innerHTML = "";
+
+      // Check if the playlist is found
+      if (playlist) {
+        // Populate songs dynamically
+        playlist.songs.forEach(async (trackUrl) => {
+          const trackInfo = await fetchSpotifyTrackInfo(trackUrl);
+
+          // Create song item HTML
+          const songItem = document.createElement("li");
+          songItem.classList.add("song-item");
+
+          songItem.innerHTML = `
+                  <img src="${trackInfo.album.images[0].url
+            }" alt="Song Thumbnail" class="song-thumbnail" />
+                  <div class="song-details">
+                      <p class="song-name">${trackInfo.name}</p>
+                      <p class="song-artist">${trackInfo.artists
+              .map((artist) => artist.name)
+              .join(", ")}</p>
+                  </div>
+                  <div class="song-duration">${formatDuration(
+                trackInfo.duration_ms
+              )}</div>
+                  <button class="delete-song-button" data-song-url="${trackUrl}" data-is-collaborative="${isCollaborative}">Delete</button>
+              `;
+
+          // Append song item to the songs container
+          songsContainer.appendChild(songItem);
+        });
+      } else {
+        // Handle case where playlist is not found
+        console.error(`Playlist "${playlistName}" not found.`);
+      }
+        }
+
+      // Function to format track duration
+      function formatDuration(durationMs) {
+        const minutes = Math.floor(durationMs / 60000);
+        const seconds = ((durationMs % 60000) / 1000).toFixed(0);
+        return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+      }
+
+      // Add event listener to playlist items to dynamically populate songs
+      const playlistItems = document.querySelectorAll(".playlists-container li");
+      playlistItems.forEach((playlistItem) => {
+        playlistItem.addEventListener("click", () => {
+          // Remove active class from all playlist items
+          playlistItems.forEach((item) =>
+            item.classList.remove("playlist-active")
+          );
+
+          // Add active class to the clicked playlist item
+          playlistItem.classList.add("playlist-active");
+
+          // Determine if the playlist is collaborative
+          const isCollaborative = playlistItem.classList.contains("collaborative");
+
+          // Populate songs for the selected playlist
+          const playlistId = playlistItem.getAttribute("data-playlist-id");
+          populateSongs(playlistId, isCollaborative);
+        });
+      });
+
+      // Add this function to handle song deletion
+      async function deleteSong(playlistName, songUrl, isCollaborative) {
+        try {
+          const response = await fetch('/delete-song', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              playlist_name: playlistName,
+              song_url: songUrl,
+              is_collaborative: isCollaborative,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            console.log(data.message);
+            // Optionally, you can update the UI to reflect the deletion
+          } else {
+            console.error(`Failed to delete song: ${data.error}`);
+          }
+        } catch (error) {
+          console.error(`Error during song deletion: ${error}`);
+        }
+      }
+
+      // Modify your existing script to include a click event listener for the delete button
+      document.addEventListener('DOMContentLoaded', function () {
+        // Your existing script goes here
+
+        // Add this script to handle delete button click
+        document.addEventListener('click', async (event) => {
+          if (event.target.classList.contains('delete-song-button')) {
+            const playlistItem = document.querySelector('.playlist-active');
+            const playlistId = playlistItem.getAttribute('data-playlist-id');
+            const songUrl = event.target.getAttribute('data-song-url');
+            const isCollaborative = event.target.getAttribute('data-is-collaborative') === 'true';
+            await deleteSong(playlistId, songUrl, isCollaborative);
+            event.target.closest('.song-item').remove();
+          }
+        });
+      });
+    </script>
+</body>
+
+</html>
