@@ -139,26 +139,23 @@ class SailorMoon(commands.AutoShardedBot):
                             data = {"_id": member.id, "stats": {"timeListened": elapsed_time.total_seconds(), "songsPlayed": 0}}
                             return await self.db.music_stats.insert_one(data)
 
-    async def on_application_command_error(self, interaction: discord.Interaction, error):
-        print(error)
-        if isinstance(error, discord.errors.MissingPermissions):
-            return
-        elif isinstance(error, discord.errors.MissingRequiredArgument):
-            return
-        
-        traceback_str = ''.join(traceback.format_exception(type(error), error, error.__traceback__))
-        await self.log_error(error, traceback_str)
+    async def log_information(self, info_type: str, interaction: discord.Interaction, error: discord.app_commands.AppCommandError):
+        match info_type:
+            case "error":
+                async with aiohttp.ClientSession() as session:
+                    webhook = discord.Webhook.from_url("https://discord.com/api/webhooks/1203369312224551003/5waea6hkgLcX7X1mGUPrg_87BGJoRugWpgSLBwgRDwtXISsUKig-rwKiH0H3wWcbTkQI", session=session)
+                    
+                    e = discord.Embed(colour=discord.Colour.red(), description=f"```py\n{error}```", timestamp=datetime.datetime.now())
+                    e.set_thumbnail(url=self.user.avatar)
+                    e.set_author(name=f"An Error has Occurred in {interaction.guild.name}!", icon_url=interaction.guild.icon)
+                    e.set_footer(text=f"Command used by: {interaction.user.name}", icon_url=interaction.user.avatar)
 
-    async def log_error(self, error, traceback):
-        error_message = f"An error occurred while processing the command: {error}"
-
-        async with aiohttp.ClientSession() as session:
-            webhook = discord.Webhook.from_url("https://discord.com/api/webhooks/1202877453081645116/hVP7DKCYpBVgkjizm39Xz5fRn8nYwtNpzuhMaryMJV1pqiF0eyfOJBZOr1xMS2DA0hHb", session=session)
-            
-            try:
-                await webhook.send(error_message, username="Error Bot")
-            except discord.errors.HTTPException as e:
-                print(f"Error sending to webhook: {e}") 
+                    try:
+                        await webhook.send(embed=e, username="Sailor Errors")
+                    except discord.errors.HTTPException as e:
+                        print(f"Error sending to webhook: {e}") 
+            case "guildJoin":
+                ...
 
 if __name__ == '__main__':
     # Start the Flask website when the bot script is run

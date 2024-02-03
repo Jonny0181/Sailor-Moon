@@ -62,5 +62,15 @@ class Developer(commands.Cog):
             options.append(app_commands.Choice(name=module_name, value=f"modules.{module_name}"))
         return options
 
+    @load.error
+    @unload.error
+    @reload.error
+    async def on_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        await self.bot.log_information("error", interaction, error)
+        try:
+            return await interaction.response.send_message("An error has occurred and has been logged, please try again!", ephemeral=True)
+        except discord.InteractionResponded:
+            return await interaction.followup.send(content="An error has occurred and has been logged, please try again!", embed=None, view=None)
+
 async def setup(bot: commands.AutoShardedBot):
     await bot.add_cog(Developer(bot))

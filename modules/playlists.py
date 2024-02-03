@@ -113,6 +113,27 @@ class Playlists(commands.GroupCog, name="playlists"):
             else:
                 return await interaction.followup.send("Failed to find the specified collaborative playlist. Please try again.")
 
+    @app_commands.command(name="delete", description="This will allow you to delete a playlist.")
+    async def delete(self, interaction: discord.Interaction, playlist: str):
+        await interaction.response.defer(thinking=True)
+        playlists = await self.user_playlists.find_one({"_id": interaction.user.id})
+
+        if not playlists or not playlists['playlists']:
+            return await interaction.followup.send("You don't have any playlists to delete.")
+
+        playlist_to_delete = None
+        for saved_playlist in playlists['playlists']:
+            if saved_playlist['name'].lower() == playlist.lower():
+                playlist_to_delete = saved_playlist
+                break
+
+        if not playlist_to_delete:
+            return await interaction.followup.send(f"Playlist '{playlist}' not found. Check the spelling and try again.")
+
+        playlists['playlists'].remove(playlist_to_delete)
+        await self.user_playlists.update_one({"_id": interaction.user.id}, {"$set": {"playlists": playlists['playlists']}})
+        await interaction.followup.send(f"Playlist **{playlist}** has been deleted.")
+
     @start.autocomplete('query')
     async def playlist_auto(self, interaction: discord.Interaction, current: str):
         personal_playlists = await self.user_playlists.find_one({"_id": interaction.user.id})
@@ -171,6 +192,7 @@ class Playlists(commands.GroupCog, name="playlists"):
         except lavalink.errors.LoadError:
             return await interaction.response.edit_message(content='Spotify API did not return a valid response!')
 
+    @delete.autocomplete('playlist')
     async def delete_auto(self, interaction: discord.Interaction, current: str):
         playlists = await self.user_playlists.find_one({"_id": interaction.user.id})
 
@@ -185,27 +207,16 @@ class Playlists(commands.GroupCog, name="playlists"):
 
         return options
 
-    @app_commands.command(name="delete", description="This will allow you to delete a playlist.")
-    @app_commands.autocomplete(playlist=delete_auto)
-    async def delete(self, interaction: discord.Interaction, playlist: str):
-        await interaction.response.defer(thinking=True)
-        playlists = await self.user_playlists.find_one({"_id": interaction.user.id})
-
-        if not playlists or not playlists['playlists']:
-            return await interaction.followup.send("You don't have any playlists to delete.")
-
-        playlist_to_delete = None
-        for saved_playlist in playlists['playlists']:
-            if saved_playlist['name'].lower() == playlist.lower():
-                playlist_to_delete = saved_playlist
-                break
-
-        if not playlist_to_delete:
-            return await interaction.followup.send(f"Playlist '{playlist}' not found. Check the spelling and try again.")
-
-        playlists['playlists'].remove(playlist_to_delete)
-        await self.user_playlists.update_one({"_id": interaction.user.id}, {"$set": {"playlists": playlists['playlists']}})
-        await interaction.followup.send(f"Playlist **{playlist}** has been deleted.")
+    @list.error
+    @liked.error
+    @start.error
+    @delete.error
+    async def on_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        await self.bot.log_information("error", interaction, error)
+        try:
+            return await interaction.response.send_message("An error has occurred and has been logged, please try again!", ephemeral=True)
+        except discord.InteractionResponded:
+            return await interaction.followup.send(content="An error has occurred and has been logged, please try again!", embed=None, view=None)
         
 async def setup(bot: commands.AutoShardedBot):
     await bot.add_cog(Playlists(bot))

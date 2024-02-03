@@ -18,6 +18,10 @@ class Help(commands.Cog):
         else:
             await self.show_command_help(interaction, command)
 
+    @app_commands.command(name="error")
+    async def error(self, interaction: discord.Interaction):
+        raise TypeError("Testing")
+
     async def show_modules_help(self, interaction):
         modules = [e.capitalize() for e in self.bot.cogs if e not in ('Jishaku', 'Help')]
         e = self.create_help_embed("Sailor Moon Modules", modules)
@@ -77,6 +81,15 @@ class Help(commands.Cog):
         e.set_author(name=title, icon_url=self.bot.user.avatar)
         e.description = "\n".join(elements)
         return e
+
+    @error.error
+    @help.error
+    async def on_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        await self.bot.log_information("error", interaction, error)
+        try:
+            return await interaction.response.send_message("An error has occurred and has been logged, please try again!", ephemeral=True)
+        except discord.InteractionResponded:
+            return await interaction.followup.send(content="An error has occurred and has been logged, please try again!", embed=None, view=None)
 
 async def setup(bot: commands.AutoShardedBot):
     await bot.add_cog(Help(bot))

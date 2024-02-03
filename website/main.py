@@ -315,4 +315,31 @@ def page_not_found(error):
     return render_template('404.html', logged_in=user_id is not None, discord_avatar_url=discord_avatar_url)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True, ssl_context=('/etc/letsencrypt/live/itzjxnny.com/fullchain.pem', '/etc/letsencrypt/live/itzjxnny.com/privkey.pem'))
+    import os
+    from gunicorn.app.base import BaseApplication
+
+    class StandaloneApplication(BaseApplication):
+        def __init__(self, app, options=None):
+            self.options = options or {}
+            self.application = app
+            super().__init__()
+
+        def load_config(self):
+            config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
+            for key, value in config.items():
+                self.cfg.set(key.lower(), value)
+
+        def load(self):
+            return self.application
+
+    # Set up Gunicorn options
+    options = {
+        'bind': '0.0.0.0:5000',
+        'workers': int(os.environ.get('GUNICORN_WORKERS', '4')),
+        'certfile': '/etc/letsencrypt/live/itzjxnny.com/fullchain.pem',
+        'keyfile': '/etc/letsencrypt/live/itzjxnny.com/privkey.pem',
+        'worker-class': 'gevent',  # Use 'gevent' worker class for better performance
+    }
+
+    # Run the application with Gunicorn
+    StandaloneApplication(app, options).run()

@@ -473,13 +473,11 @@ class Music(commands.Cog):
     @seek.error
     @play.error
     async def on_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
-        if isinstance(error, discord.app_commands.errors.CheckFailure):
-            return await interaction.response.send_message(f"You don't have permissions to use this command!", ephemeral=True)
-        if isinstance(error, discord.app_commands.errors.AppCommandError):
-            e = discord.Embed(colour=discord.Colour.red())
-            e.set_author(name="An error has occured!", icon_url=self.bot.user.avatar)
-            e.description = f"{error}"
-            return await interaction.response.send_message(embed=e)
+        await self.bot.log_information("error", interaction, error)
+        try:
+            return await interaction.response.send_message("An error has occurred and has been logged, please try again!", ephemeral=True)
+        except discord.InteractionResponded:
+            return await interaction.followup.send(content="An error has occurred and has been logged, please try again!", embed=None, view=None)
 
     @lavalink.listener(lavalink.events.WebSocketClosedEvent)
     async def on_websocket_closed(self, event: lavalink.events.WebSocketClosedEvent):

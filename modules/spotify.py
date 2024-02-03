@@ -177,23 +177,12 @@ class Spotify(commands.GroupCog, description="All spotify related commands."):
     @spotify_info.error
     @spotify_liked.error
     @spotify_playlist.error
-    async def send_error(self, interaction: discord.Interaction, error):
-        if isinstance(error, commands.MissingPermissions):
-            return await interaction.response.send_message("You do not have the required permissions to use this command!", ephemeral=True)
-        if isinstance(error, commands.MissingRequiredArgument):
-            return await interaction.response.send_message("You are missing a required argument!", ephemeral=True)
-        if isinstance(error, commands.BadArgument):
-            return await interaction.response.send_message("You provided an invalid argument!", ephemeral=True)
-        if isinstance(error, commands.CommandInvokeError):
-            return await interaction.response.send_message("An error occurred while running this command!", ephemeral=True)
-        else:
-            e = discord.Embed(title="An Error has Occurred!",
-                              colour=discord.Colour.red())
-            e.add_field(name="Error:", value=error)
-            try:
-                await interaction.response.send_message(embed=e)
-            except:
-                await interaction.followup.send(embed=e)
+    async def on_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
+        await self.bot.log_information("error", interaction, error)
+        try:
+            return await interaction.response.send_message("An error has occurred and has been logged, please try again!", ephemeral=True)
+        except discord.InteractionResponded:
+            return await interaction.followup.send(content="An error has occurred and has been logged, please try again!", embed=None, view=None)
 
     @spotify_playlist.autocomplete('playlist')
     async def playlist_auto(self, interaction: discord.Interaction, current: str) -> List[app_commands.Choice[str]]:
