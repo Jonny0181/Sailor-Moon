@@ -1,5 +1,6 @@
 import os
 import re
+import aiohttp
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from requests_oauthlib import OAuth2Session
@@ -19,6 +20,7 @@ DB_CLIENT = MongoClient(MONGO_URI)
 DB = DB_CLIENT[MONGO_NAME]
 
 # Discord OAuth configuration
+DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
 DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
 DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI")
@@ -129,7 +131,7 @@ async def dashboard():
         print(collab_data)
 
     # Render the dashboard template with Spotify account status and Discord avatar
-    return render_template('dashboard.html', logged_in=user_id, spotify_linked=spotify_linked, profile_link=profile_link,
+    return render_template('dashboard.html', DISCORD_BOT_TOKEN=DISCORD_BOT_TOKEN, logged_in=user_id, spotify_linked=spotify_linked, profile_link=profile_link,
                            user_username=user_username, user_profile_pic=user_profile_pic,
                            discord_avatar_url=discord_avatar_url,
                            spotify_logo_url="{{ url_for('static', filename='spotify_logo.png') }}", spotify_access_token=spotify_access_token,
@@ -205,7 +207,7 @@ def delete_song_from_collaborative(playlist_name, song_url):
         return {'success': False, 'error': 'Collaborative playlist not found'}
 
 @app.route('/delete-song', methods=['POST'])
-def delete_song():
+async def delete_song():
     try:
         data = request.get_json()
         playlist_name = data.get('playlist_name')
@@ -219,6 +221,39 @@ def delete_song():
         return jsonify({'success': True, 'message': 'Song deleted successfully'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+    
+async def get_user_info(user_id):
+    async with aiohttp.ClientSession() as session:
+        headers = {
+            'Authorization': f'Bot {DISCORD_BOT_TOKEN}'
+        }
+
+        url = f'https://discord.com/api/users/{user_id}'
+        async with session.get(url, headers=headers) as response:
+            if response.status == 200:
+                data = await response.json()
+                return {'success': True, 'avatar': str(data.get('avatar', '')), 'name': data.get('username', '')}
+            else:
+                error_message = await response.text()
+                print(f'Error fetching user info. Status code: {response.status}, Response: {error_message}')
+                return {'success': False, 'message': f'Error fetching user info. Status code: {response.status}'}
+
+@app.route('/get-user-info', methods=['POST'])
+async def get_user_info_route():
+    try:
+        data = request.json
+        user_id = int(data.get('user_id'))
+        print(f'Received request for user ID: {user_id}')
+
+        user_info = await get_user_info(user_id)
+
+        if user_info['success']:
+            return jsonify(user_info)
+        else:
+            return jsonify({'success': False, 'message': 'User not found'})
+    except Exception as e:
+        print(f'Error in get_user_info: {str(e)}')
+        return jsonify({'success': False, 'message': str(e)})
 
 # Flask route for Discord authorization
 @app.route('/discord-login')

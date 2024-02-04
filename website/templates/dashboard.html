@@ -270,13 +270,16 @@
 
     #playlists-tab-content .content {
       display: flex;
-      width: 61vw;
+      width: 80vw;
+      gap: 2vw;
       margin: auto;
+      flex-direction: row;
     }
 
     .playlist-active {
       background-color: var(--discord-blue-hover);
       color: var(--text-hover) !important;
+      max-width: 180px;
     }
 
     .playlists-container,
@@ -284,11 +287,23 @@
       flex: 1;
     }
 
+    .playlist-containers {
+      background-color: var(--background2);
+      padding: 10px 6px 10px 21px;
+      height: 700px;
+      width: 230px;
+      margin: 0 20px;
+      border-radius: 15px;
+    }
+
     .playlists-container {
       display: flex;
       flex-direction: column;
       max-width: fit-content !important;
-      margin-right: 3vw;
+    }
+
+    .playlists-container h2 {
+      font-size: 19px !important;
     }
 
     .playlists-container ul {
@@ -306,7 +321,7 @@
       cursor: pointer;
       transition: color 0.2s ease;
       color: var(--text-normal);
-      margin-left: 40px;
+      font-size: 15px;
     }
 
     .playlists-container li:hover {
@@ -316,7 +331,10 @@
     .songs-container {
       display: flex;
       flex-direction: column;
-      margin-top: 3vh;
+      background-color: var(--background2);
+      padding: 30px 35px;
+      max-width: 800px;
+      border-radius: 15px;
     }
 
     .songs-container ul {
@@ -329,14 +347,14 @@
     }
 
     .song-item {
+      max-width: 800px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex: 1;
       padding: 0.5rem 1rem;
       border-radius: 3px;
-      background-color: var(--background2);
-      transition: background-color 0.2s ease;
+      background-color: var(--background1);
     }
 
     .song-thumbnail {
@@ -406,6 +424,36 @@
 
     .no-playlists .title {
       margin-bottom: 2rem;
+    }
+
+    .collab-container {
+      background-color: var(--background2);
+      padding: 25px 20px;
+      border-radius: 15px;
+    }
+
+    .collab-container h2 {
+      margin: 0 0 15px 0;
+    }
+
+    .collab-container input {
+      border: none;
+      background-color: var(--background1);
+      height: 35px;
+      width: 150px;
+      border-radius: 6px;
+    }
+    
+    .collab-container input[type="text" i] {
+    padding: 0 11px;
+    }
+
+    .collab-container #add-user-button {
+      border: none;
+      background-color: #00b350;
+      padding: 10px 15px;
+      color: white;
+      border-radius: 6px;
     }
   </style>
 </head>
@@ -499,36 +547,45 @@
         {% endif %}
         
         {% if collab_playlists %}
-        <div class="playlists-container">
-          <h2>🤝 Collaborative Playlists</h2>
-          <ul>
-            {% for collab_playlist in collab_data %}
-            {% if logged_in in collab_playlist['allowed_users'] %}
-            <li data-playlist-id="{{ collab_playlist['name'] }}" class="playlist-item collaborative">
-              {{ collab_playlist['name'] }}
-            </li>
-            {% endif %}
-            {% endfor %}
-          </ul>
-        </div>
+          <div class="playlists-container">
+            <h2>🤝 Collab Playlists</h2>
+            <ul>
+              {% for collab_playlist in collab_data %}
+                {% if logged_in in collab_playlist['allowed_users'] %}
+                  <li data-playlist-id="{{ collab_playlist['name'] }}" class="playlist-item collaborative">
+                    {{ collab_playlist['name'] }}
+                  </li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </div>
         {% endif %}
 
       </div>
-      <div id="playlist-songs" class="songs-container">
-        <ul id="songs-list"></ul>
-      </div>
-      {% else %}
-      <div class="no-playlists">
-        <div class="title">
-          <h1>No Playlists Found</h1>
+        <div id="playlist-songs" class="songs-container">
+          <ul id="songs-list"></ul>
         </div>
-        <div class="description">
-          <p>Looks like you don't have any playlists!</p>
-          <p>Maybe try playing some music on Sailor and creating some awesome playlist!</p>
+        <div id="collab-container" class="collab-container" style="display: none;">
+          <h2>👥 Authorized Users</h2>
+          <div class="input-button">
+            <input type="text" id="collab-input" placeholder="Enter user ID" />
+            <button id="add-user-button" onclick="addUserToCollabPlaylist()">Add User</button>
+          </div>
+          <div class="users-list"></div>
         </div>
-      </div>
-      {% endif %}
     </div>
+    {% else %}
+    <div class="no-playlists">
+      <div class="title">
+        <h1>No Playlists Found</h1>
+      </div>
+      <div class="description">
+        <p>Looks like you don't have any playlists!</p>
+        <p>Maybe try playing some music on Sailor and creating some awesome playlist!</p>
+      </div>
+    </div>
+    {% endif %}
+</div>
 
     <script>
       const tabs = document.querySelectorAll("nav ul li a");
@@ -576,12 +633,10 @@
       }
 
       // Function to dynamically add songs to the playlist
-      function populateSongs(playlistName, isCollaborative) {
+      async function populateSongs(playlistName, isCollaborative) {
         const songsContainer = document.getElementById("songs-list");
-        const user_playlists = {{ user_playlists_data | tojson | safe
-      }};
-      const collab_data = {{ collab_data | tojson | safe }}
-      console.log(user_playlists);
+        const user_playlists = {{ user_playlists_data | tojson | safe }};
+        const collab_data = {{ collab_data | tojson | safe }}
 
       // Find the playlist by name
       let playlist;
@@ -589,12 +644,43 @@
         playlist = collab_data.find(
           (collabPlaylist) => collabPlaylist.name === playlistName
         );
+        console.log(playlist)
+
+        const usersListContainer = document.querySelector('.users-list');
+        usersListContainer.innerHTML = '';
+        for (const userId of playlist['allowed_users']) {
+          console.log(userId)
+              try {
+                const response = await fetch('/get-user-info', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({ user_id: userId }),
+                });
+
+                if (!response.ok) {
+                  throw new Error(`Failed to fetch user info: ${response.status} ${response.statusText}`);
+                }
+
+                const userData = await response.json();
+
+                // Display user information (name and avatar) in the "users-list" div
+                const userItem = document.createElement('div');
+                userItem.innerHTML = `
+                  <img src="${userData.avatar}" alt="User Avatar" />
+                  <span>${userData.name}</span>
+                `;
+                usersListContainer.appendChild(userItem);
+              } catch (error) {
+                console.error(`Error fetching user info: ${error}`);
+              }
+            }
       } else {
         playlist = user_playlists.playlists.find(
           (userPlaylist) => userPlaylist.name === playlistName
         );
       }
-      console.log(playlist);
 
       // Clear existing songs
       songsContainer.innerHTML = "";
@@ -645,9 +731,7 @@
       playlistItems.forEach((playlistItem) => {
         playlistItem.addEventListener("click", () => {
           // Remove active class from all playlist items
-          playlistItems.forEach((item) =>
-            item.classList.remove("playlist-active")
-          );
+          playlistItems.forEach((item) => item.classList.remove("playlist-active"));
 
           // Add active class to the clicked playlist item
           playlistItem.classList.add("playlist-active");
@@ -658,6 +742,10 @@
           // Populate songs for the selected playlist
           const playlistId = playlistItem.getAttribute("data-playlist-id");
           populateSongs(playlistId, isCollaborative);
+
+          // Show or hide the collaborator container based on the playlist type
+          const collabContainer = document.getElementById("collab-container");
+          collabContainer.style.display = isCollaborative ? "block" : "none";
         });
       });
 
