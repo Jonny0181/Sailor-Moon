@@ -1,77 +1,28 @@
 import os
-import re
-import aiohttp
-from dotenv import load_dotenv
-from pymongo import MongoClient
-from requests_oauthlib import OAuth2Session
+import traceback
+from keys import *
 from requests.auth import HTTPBasicAuth
-from utils.spotify import get_current_user, format_duration
-from flask import Flask, render_template, redirect, request, session, jsonify
-
-load_dotenv()
+from utils.misc import get_user_info
+from utils.spotify import get_current_user
+from flask import Flask, render_template, redirect, request, session, jsonify, url_for
+from utils.database import ( delete_song_from_collaborative, delete_song_from_playlist, get_spotify_info,
+                            get_user_statistics, get_user_playlists, get_collaborative_playlists, get_liked_songs )
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY")
+app.secret_key = FLASK_SECRET_KEY
 
-# MongoDB configuration
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_NAME = os.getenv("MONGO_NAME")
-DB_CLIENT = MongoClient(MONGO_URI)
-DB = DB_CLIENT[MONGO_NAME]
-
-# Discord OAuth configuration
-DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID")
-DISCORD_CLIENT_SECRET = os.getenv("DISCORD_CLIENT_SECRET")
-DISCORD_REDIRECT_URI = os.getenv("DISCORD_REDIRECT_URI")
-DISCORD_API_URL = "https://discord.com/api"
-
-# Spotify OAuth configuration
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
-SPOTIFY_BASE_URL = "https://accounts.spotify.com/authorize"
-SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
-SPOTIFY_SCOPE = [
-    "playlist-read-collaborative",
-    "user-read-recently-played",
-    "playlist-read-private",
-    "user-library-read",
-    "user-top-read"
-]
-
-# OAuth2Session setup
-discord_oauth = OAuth2Session(
-    client_id=DISCORD_CLIENT_ID,
-    redirect_uri=DISCORD_REDIRECT_URI,
-    scope=["identify", "guilds", "guilds.join", "email"]
-)
-
-spotify_oauth = OAuth2Session(
-    client_id=SPOTIFY_CLIENT_ID,
-    redirect_uri=SPOTIFY_REDIRECT_URI,
-    scope=SPOTIFY_SCOPE
-)
-
-# Flask route for home
-# Flask route for home
 @app.route('/')
 async def home():
-    # Retrieve user ID and avatar URL from the session
     user_id = session.get('user_id')
     discord_avatar_url = session.get('discord_avatar_url')
-
-    # Render the template with the user's avatar URL
     return render_template('home.html', logged_in=user_id is not None, discord_avatar_url=discord_avatar_url)
 
-# Flask route for dashboard
+
 @app.route('/dashboard')
 async def dashboard():
-    # Retrieve user ID and Discord avatar URL from the session
     user_id = int(session.get('user_id'))
     discord_avatar_url = session.get('discord_avatar_url')
 
-    # Check if the user's Spotify account is linked
     spotify_linked = False
     user_username = ""
     user_profile_pic = ""
@@ -80,58 +31,16 @@ async def dashboard():
     user_playlists = ""
 
     if user_id:
-        data = DB.spotifyOauth.find_one({"_id": user_id})
-        if data:
+        spotify_access_token, user_profile_pic, profile_link, user_username = await get_spotify_info(user_id)
+        if spotify_access_token:
             spotify_linked = True
-            spotify_info, token = await get_current_user(user_id)
-            spotify_access_token = token
 
-            if 'images' in spotify_info and spotify_info['images']:
-                user_profile_pic = spotify_info['images'][0]['url']
-            else:
-                user_profile_pic = "{{ url_for('static', filename='default_profile_picture.png') }}"
+    song_stats, listen_stats = get_user_statistics(user_id)
+    liked_songs = get_liked_songs(user_id)
+    user_playlists_data_bool, user_playlists, playlists_created, user_playlists_data = get_user_playlists(user_id)
+    collab_playlists, collab_data = get_collaborative_playlists(user_id)
 
-            profile_link = spotify_info['external_urls']['spotify']
-            user_username = spotify_info['display_name']
-
-    song_stats = 0
-    listen_stats = "00:00:00"
-    data = DB.music_stats.find_one({"_id": user_id})
-    if data:
-        song_stats = data['stats']['songsPlayed']
-        listen_stats = format_duration(data['stats']['timeListened'])
-
-    liked_songs = 0
-    playlists_created = 0
-
-    liked_data = DB.liked.find_one({"_id": user_id})
-    if liked_data:
-        liked_songs = len(liked_data['songs'])
-
-    user_playlists_data_bool = False
-    user_playlists_data = None
-    playlists_data = DB.playlists.find_one({"_id": user_id})
-    if playlists_data:
-        user_playlists_data = playlists_data
-        user_playlists_data_bool = True
-        playlists_created = len(playlists_data['playlists'])
-        user_playlists = playlists_data['playlists']
-
-    collab_playlists = False
-    collab_data = list(DB.collaborative_playlists.find({
-        "$or": [
-            {"creator_id": user_id},
-            {"allowed_users": user_id}
-        ]
-    }))
-    if collab_data:
-        collab_playlists = True
-        user_playlists_data_bool = True
-        collab_data = list(collab_data)
-        print(collab_data)
-
-    # Render the dashboard template with Spotify account status and Discord avatar
-    return render_template('dashboard.html', DISCORD_BOT_TOKEN=DISCORD_BOT_TOKEN, logged_in=user_id, spotify_linked=spotify_linked, profile_link=profile_link,
+    return render_template('dashboard.html', DISCORD_BOT_TOKEN=DISCORD_BOT_TOKEN, logged_in=str(user_id), spotify_linked=spotify_linked, profile_link=profile_link,
                            user_username=user_username, user_profile_pic=user_profile_pic,
                            discord_avatar_url=discord_avatar_url,
                            spotify_logo_url="{{ url_for('static', filename='spotify_logo.png') }}", spotify_access_token=spotify_access_token,
@@ -139,76 +48,10 @@ async def dashboard():
                            user_playlists_data_bool=user_playlists_data_bool, user_playlists=user_playlists, playlists_created=playlists_created,
                            user_playlists_data=user_playlists_data, collab_playlists=collab_playlists, collab_data=collab_data)
 
-
-# function to delete a song from the playlist in the database
-def delete_song_from_playlist(playlist_name, song_url):
-    print(playlist_name, song_url)
-    user_id = int(session.get('user_id'))
-
-    # Print user_id for debugging
-    print("user_id:", user_id)
-
-    # Retrieve the current playlists data for debugging
-    playlists_data_before = DB.playlists.find_one({"_id": user_id})
-
-    # Print playlists_data_before for debugging
-    print("Before update:", playlists_data_before)
-
-    # Use $pull to remove the song from the playlist directly in the database
-    result = DB.playlists.update_one(
-        {"_id": user_id, "playlists.name": {"$regex": f"^{re.escape(playlist_name)}$", "$options": "i"}},
-        {"$pull": {"playlists.$.songs": song_url}}
-    )
-
-    # Retrieve the updated playlists data for debugging
-    playlists_data_after = DB.playlists.find_one({"_id": user_id})
-
-    # Print playlists_data_after for debugging
-    print("After update:", playlists_data_after)
-
-    if result.modified_count > 0:
-        return {'success': True, 'message': 'Song deleted successfully'}
-    else:
-        return {'success': False, 'error': 'Song not found in the playlist or playlist not found'}
-
-
-def delete_song_from_collaborative(playlist_name, song_url):
-    user_id = int(session.get('user_id'))
-
-    # Find the collaborative playlist by name
-    playlist_data = DB.collaborative_playlists.find_one({"name": playlist_name})
-
-    if playlist_data:
-        creator_id = playlist_data.get("creator_id")
-        allowed_users = playlist_data.get("allowed_users", [])
-
-        # Check if the user is the creator or an allowed user
-        if user_id == creator_id or user_id in allowed_users:
-            # Remove song_url from songs
-            songs = playlist_data.get("songs", [])
-            if song_url in songs:
-                songs.remove(song_url)
-
-                # Update the collaborative playlist in the database
-                result = DB.collaborative_playlists.update_one(
-                    {"name": playlist_name},
-                    {"$set": {"songs": songs}}
-                )
-
-                if result.modified_count > 0:
-                    return {'success': True, 'message': 'Song deleted successfully'}
-                else:
-                    return {'success': False, 'error': 'Failed to update collaborative playlist'}
-            else:
-                return {'success': False, 'error': 'Song not found in the playlist'}
-        else:
-            return {'success': False, 'error': 'Permission denied: You are not the creator or an allowed user'}
-    else:
-        return {'success': False, 'error': 'Collaborative playlist not found'}
-
 @app.route('/delete-song', methods=['POST'])
 async def delete_song():
     try:
+        user_id = int(session.get('user_id'))
         data = request.get_json()
         playlist_name = data.get('playlist_name')
         song_url = data.get('song_url')
@@ -218,42 +61,126 @@ async def delete_song():
         else:
             delete_song_from_playlist(playlist_name, song_url)
 
-        return jsonify({'success': True, 'message': 'Song deleted successfully'})
+        user_playlists = None
+        playlists_data = DB.playlists.find_one({"_id": user_id})
+        if playlists_data:
+            user_playlists = playlists_data['playlists']
+
+        collab_data = DB.collaborative_playlists.find({
+            "$or": [
+                {"creator_id": user_id},
+                {"allowed_users": user_id}
+            ]
+        })
+        if collab_data:
+            collab_data = list(collab_data)
+            for doc in collab_data:
+                doc['creator_id'] = str(doc['creator_id'])
+                doc['allowed_users'] = [str(user_id) for user_id in doc['allowed_users']]
+
+        return jsonify({
+            'user_playlists': user_playlists,
+            'collab_data': collab_data,
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
     
-async def get_user_info(user_id):
-    async with aiohttp.ClientSession() as session:
-        headers = {
-            'Authorization': f'Bot {DISCORD_BOT_TOKEN}'
-        }
 
-        url = f'https://discord.com/api/users/{user_id}'
-        async with session.get(url, headers=headers) as response:
-            if response.status == 200:
-                data = await response.json()
-                return {'success': True, 'avatar': str(data.get('avatar', '')), 'name': data.get('username', '')}
+@app.route('/remove-user', methods=['POST'])
+async def remove_user():
+    try:
+        data = request.get_json()
+        playlist = data.get('playlist')
+        userToRemove = int(data.get('userId'))
+        user_id = int(session.get('user_id'))
+
+        collab_playlist = DB.collaborative_playlists.find_one({'_id': playlist, 'name': str(playlist).split("_")[0], 'creator_id': int(str(playlist).split("_")[1])})
+        if collab_playlist:
+            if userToRemove in collab_playlist['allowed_users']:
+                DB.collaborative_playlists.update_one(
+                    {'_id': playlist, 'name': str(playlist).split("_")[0], 'creator_id': int(str(playlist).split("_")[1])},
+                    {'$pull': {'allowed_users': userToRemove}}
+                )
+
+                user_playlists = None
+                playlists_data = DB.playlists.find_one({"_id": user_id})
+                if playlists_data:
+                    user_playlists = playlists_data['playlists']
+
+                collab_data = DB.collaborative_playlists.find({
+                    "$or": [
+                        {"creator_id": user_id},
+                        {"allowed_users": user_id}
+                    ]
+                })
+                if collab_data:
+                    collab_data = list(collab_data)
+                    for doc in collab_data:
+                        doc['creator_id'] = str(doc['creator_id'])
+                        doc['allowed_users'] = [str(user_id) for user_id in doc['allowed_users']]
+
+                return jsonify({'success': True, 'error': 'User removed from allowed list.', 'user_playlists': user_playlists, 'collab_data': collab_data})
             else:
-                error_message = await response.text()
-                print(f'Error fetching user info. Status code: {response.status}, Response: {error_message}')
-                return {'success': False, 'message': f'Error fetching user info. Status code: {response.status}'}
+                return jsonify({'success': False, 'error': 'Playlist not found or user info not available.'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/add-user', methods=['POST'])
+async def add_user():
+    try:
+        data = request.get_json()
+        user_id = int(session.get('user_id'))
+        new_user_id = int(data.get('userID'))
+        playlist_id = data.get('currentPlaylist')
+        playlist_name, creator_id = playlist_id.split('_')
+        creator_id = int(creator_id)
+        user_id = int(session.get('user_id'))
+
+        playlist = DB.collaborative_playlists.find_one({'_id': playlist_id, 'name': playlist_name, 'creator_id': creator_id})
+
+        if playlist:
+            if new_user_id in playlist['allowed_users']:
+                return jsonify({'success': True, 'error': 'User already in allowed list.'})
+
+            DB.collaborative_playlists.update_one(
+                {'_id': playlist_id, 'name': playlist_name, 'creator_id': creator_id},
+                {'$push': {'allowed_users': new_user_id}}
+            )
+
+            user_playlists = None
+            playlists_data = DB.playlists.find_one({"_id": user_id})
+            if playlists_data:
+                user_playlists = playlists_data['playlists']
+
+            collab_data = DB.collaborative_playlists.find({
+                "$or": [
+                    {"creator_id": user_id},
+                    {"allowed_users": user_id}
+                ]
+            })
+            if collab_data:
+                collab_data = list(collab_data)
+                for doc in collab_data:
+                    doc['creator_id'] = str(doc['creator_id'])
+                    doc['allowed_users'] = [str(user_id) for user_id in doc['allowed_users']]
+                    
+            return jsonify({'success': True, 'error': 'User added to allowed list.', 'user_playlists': user_playlists, 'collab_data': collab_data,})
+        else:
+            return jsonify({'success': False, 'error': 'Playlist not found or user info not available.'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/get-user-info', methods=['POST'])
 async def get_user_info_route():
     try:
         data = request.json
-        user_id = int(data.get('user_id'))
-        print(f'Received request for user ID: {user_id}')
-
-        user_info = await get_user_info(user_id)
-
-        if user_info['success']:
-            return jsonify(user_info)
-        else:
-            return jsonify({'success': False, 'message': 'User not found'})
+        user_id = str(data.get('user_id')) 
+        user_info = get_user_info(user_id, DISCORD_BOT_TOKEN, DISCORD_API_URL)
+        return jsonify(user_info)
     except Exception as e:
         print(f'Error in get_user_info: {str(e)}')
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': f'Unexpected error: {str(e)}'})
 
 # Flask route for Discord authorization
 @app.route('/discord-login')
@@ -287,20 +214,23 @@ async def discord_callback():
     # Redirect to the home page
     return redirect('/')
 
-# Flask route for Spotify login
 @app.route('/spotify-login')
 async def spotify_login():
-    # Retrieve user ID from the session
-    user_id = session.get('user_id')
-
-    # Redirect to Spotify authorization URL
     authorization_url, _ = spotify_oauth.authorization_url(SPOTIFY_BASE_URL)
     return redirect(authorization_url)
+
+@app.route('/spotify-disconnect', methods=['POST'])
+async def spotify_disconnect():
+    user_id = int(session.get('user_id'))
+    try:
+        DB.spotifyOauth.find_one_and_delete({"_id": user_id})
+        return {'success': True, 'message': f'Account disconnected.'}
+    except Exception as e:
+        return {'success': False, 'message': f'Unexpected error: {e}'}
 
 # Flask route for Spotify callback
 @app.route('/spotify-callback')
 async def spotify_callback():
-    # Retrieve user ID from the session
     user_id = int(session.get('user_id'))
 
     auth = HTTPBasicAuth(SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
@@ -311,29 +241,21 @@ async def spotify_callback():
             DB.spotifyOauth.insert_one({"_id": user_id, "oauthData": oauthData})
 
         try:
-            # Fetch Spotify user info after connecting
-            spotify_info = await get_current_user(user_id)
-
-            # Store necessary information in session for rendering the dashboard
+            spotify_info = await get_current_user(user_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET)
+            spotify_info = spotify_info[0]
             session['spotify_linked'] = True
             session['profile_link'] = spotify_info['external_urls']['spotify']
-            session['user_username'] = spotify_info['display_name']
+            session['user_username'] = spotify_info.get('display_name', 'Unknown')
 
             if 'images' in spotify_info and spotify_info['images']:
-                # Use the first available profile picture
-                session['user_profile_pic'] = spotify_info['images'][0]['url']
+                session['user_profile_pic'] = spotify_info['images'][0].get('url', url_for('static', filename='default_profile_picture.png'))  # Handling if URL is not available
             else:
-                # Use default profile picture
-                session['user_profile_pic'] = "{{ url_for('static', filename='default_profile_picture.png') }}"
-
-            # Redirect to the dashboard after successfully connecting Spotify account
+                session['user_profile_pic'] = url_for('static', filename='default_profile_picture.png')
             return redirect('/dashboard')
-        except Exception as e:
-            # Render the error page for failed Spotify account connection
-            print(f"Error fetching Spotify user info: {e}")
+        except Exception:
+            traceback.print_exc()
             return render_template('error.html')
     else:
-        # Render the error page for failed Spotify account connection
         return render_template('error.html')
 
 @app.route('/discord-logout')

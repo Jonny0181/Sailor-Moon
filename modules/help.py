@@ -18,10 +18,6 @@ class Help(commands.Cog):
         else:
             await self.show_command_help(interaction, command)
 
-    @app_commands.command(name="error")
-    async def error(self, interaction: discord.Interaction):
-        raise TypeError("Testing")
-
     async def show_modules_help(self, interaction):
         modules = [e.capitalize() for e in self.bot.cogs if e not in ('Jishaku', 'Help')]
         e = self.create_help_embed("Sailor Moon Modules", modules)
@@ -82,7 +78,6 @@ class Help(commands.Cog):
         e.description = "\n".join(elements)
         return e
 
-    @error.error
     @help.error
     async def on_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
         await self.bot.log_information("error", interaction, error)

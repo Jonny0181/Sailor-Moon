@@ -5,6 +5,7 @@ import requests
 import lavalink
 import datetime
 import asyncio
+from utils import formats
 from typing import Optional
 from aiohttp import request
 from discord.ext import commands
@@ -448,17 +449,11 @@ class Music(commands.Cog):
             e.set_author(name=f"{user.display_name} | Music Stats")
             e.set_thumbnail(url=user.display_avatar)
             e.add_field(name="Songs Played", value=data['stats'].get('songsPlayed', 0), inline=False)
-            e.add_field(name="Duration Listened", value=await self.format_duration(data['stats'].get('timeListened', 0)), inline=False)
+            e.add_field(name="Duration Listened", value=await formats.format_duration(data['stats'].get('timeListened', 0)), inline=False)
             e.timestamp = datetime.datetime.now()
             return await interaction.followup.send(embed=e)
         else:
             return await interaction.followup.send(f"{user.display_name} hasn't listened to any music yet!")
-
-    async def format_duration(self, seconds):
-        # Function to format seconds into a readable duration (hh:mm:ss)
-        minutes, seconds = divmod(seconds, 60)
-        hours, minutes = divmod(minutes, 60)
-        return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
 
     @autoplay.error
     # @lowpass.error

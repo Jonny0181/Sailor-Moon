@@ -8,3 +8,9 @@ async def translate(self, guild_id, key):
         return self.bot.languages['English'][key]
     else:
         return f"Translation not found for key: {key}"
+    
+async def format_duration(seconds):
+    # Function to format seconds into a readable duration (hh:mm:ss)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
